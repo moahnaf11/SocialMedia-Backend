@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String          @unique @default(uuid())
+  firstname        String
+  lastname         String
+  username         String          @unique
+  email            String          @unique
+  password         String
+  profilePicture   String
+  bio              String
+  createdAt        DateTime        @default(now())
+  posts            Post[]
+  comments         Comment[]
+  likes            Like[]
+  sentRequests     FollowRequest[] @relation("SentRequests")
+  receivedRequests FollowRequest[] @relation("ReceivedRequests")
+  followers        Follower[]      @relation("FollowerRelation")
+  following        Follower[]      @relation("FollowingRelation")
+
+  @@map("users")
+}
+
+model Post {
+  id        String    @unique @default(uuid())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String
+  content   String
+  createdAt DateTime  @default(now())
+  images    File[]
+  comments  Comment[]
+  likes     Like[]
+
+  @@map("posts")
+}
+
+model Comment {
+  id        String   @unique @default(uuid())
+  User      User?    @relation(fields: [userId], references: [id])
+  userId    String?
+  Post      Post?    @relation(fields: [postId], references: [id])
+  postId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("comments")
+}
+
+model Follower {
+  id          Int    @id @default(autoincrement())
+  followerId  String
+  followingId String
+  follower    User   @relation("FollowerRelation", fields: [followerId], references: [id])
+  following   User   @relation("FollowingRelation", fields: [followingId], references: [id])
+
+  @@map("followers")
+}
+
+model FollowRequest {
+  id         String              @unique @default(uuid())
+  senderId   String
+  receiverId String
+  status     FollowRequestStatus @default(PENDING) // could be "pending", "accepted", "rejected" or "blocked"
+  sender     User                @relation("SentRequests", fields: [senderId], references: [id])
+  receiver   User                @relation("ReceivedRequests", fields: [receiverId], references: [id])
+
+  @@map("followrequests")
+}
+
+model Like {
+  id     String @unique @default(uuid())
+  User   User   @relation(fields: [userId], references: [id])
+  userId String
+  Post   Post   @relation(fields: [postId], references: [id])
+  postId String
+
+  @@map("likes")
+}
+
+model File {
+  id        String   @unique @default(uuid())
+  type      FileType
+  url       String // cloudinary url
+  public_id String // cloudinary public_id
+  Post      Post?    @relation(fields: [postId], references: [id])
+  postId    String?
+
+  @@map("files")
+}
+
+enum FileType {
+  IMAGE
+  RAW
+
+  @@map("filetypes")
+}
+
+enum FollowRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED
+
+  @@map("followrequeststatuses")
+}
